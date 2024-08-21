@@ -180,4 +180,5 @@ ventajaDeTipoParaAtacante(TipoAtacante, TipoDefensor, PotenciaAtacante, Potencia
 
 ventajaDeTipoParaAtacante(TipoAtacante, TipoDefensor, PotenciaAtacante, PotenciaDefensor) :-
     not(esFuerte(TipoAtacante, TipoDefensor)),
+    not(esFuerte(TipoDefensor,TipoAtacante)), 
     PotenciaAtacante > PotenciaDefensor.
