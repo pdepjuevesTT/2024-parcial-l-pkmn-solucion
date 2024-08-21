@@ -1,0 +1,1 @@
+# 2024-parcial-l-pkmn-solucion
