@@ -35,7 +35,7 @@ deQueTipoHayMasDeUnPokemon(Tipo) :-
     Pokemon \= OtroPokemon.
 
 % Punto 2:
-esLibre(Pokemon) :-
+libre(Pokemon) :-
     pokemon(Pokemon, _),
     not(tieneA(_, Pokemon)).
 
@@ -83,50 +83,48 @@ puedeUsar(venusaur, rayoSolar).
 puedeUsar(venusaur, cuchillada).
 
 % hechos: movimientos(nombreDeMov, tipoDeMov).
-movimiento(trueno, tipoEspecial(1, 75)).
-movimiento(ataqueRapido, tipoEncadenado([1, 29, 39, 12, 23])).
-movimiento(lanzallamas, tipoEspecial(3, 120)).
-movimiento(cuchillada, tipoFisico(65)).
-movimiento(carambano, tipoEncadenado([80, 10 , 1])).
-movimiento(rayoSolar, tipoEspecial(2, 120)).
+movimiento(trueno, especial(1, 75)).
+movimiento(ataqueRapido, encadenado([1, 29, 39, 12, 23])).
+movimiento(lanzallamas, especial(3, 120)).
+movimiento(cuchillada, fisico(65)).
+movimiento(carambano, encadenado([80, 10 , 1])).
+movimiento(rayoSolar, especial(2, 120)).
 
 % 1) La peligrosidad de un Pokémon, que se calcula como la cantidad de movimientos con potencia mayor a 100.
 
 % Punto 1: 
 peligrosidadDe(Pokemon, Peligrosidad) :-
-    findall(Movimiento, movimientoConPotenciaMayorA100De(Pokemon, Movimiento), ListaDeMovimientosSuperiores),
-    length(ListaDeMovimientosSuperiores, Peligrosidad).
+    pokemon(Pokemon,_),
+    findall(_, tieneMovimientoPotente(Pokemon), Lista),
+    length(Lista, Peligrosidad).
 
-movimientoConPotenciaMayorA100De(Pokemon, Movimiento) :-
-    potenciaDeUnMov(Pokemon, Movimiento, PotenciaFinal),
-    PotenciaFinal > 100.
+tieneMovimientoPotente(Pokemon):-
+    potenciaMovimiento(Pokemon, Potencia),
+    Potencia > 100.
 
-potenciaDeUnMov(Pokemon, Movimiento, PotenciaFinal) :-
+potenciaMovimiento(Pokemon, Potencia) :-
     puedeUsar(Pokemon, Movimiento),
-    movimiento(Movimiento, TipoDeMov),
-    potenciaEnBaseTipoDeMov(TipoDeMov, PotenciaFinal).
+    movimiento(Movimiento, Tipo),
+    potencia(Tipo,Potencia).
 
-potenciaEnBaseTipoDeMov(tipoEspecial(NroDeGeneracion, PotenciaBase), PotenciaFinal) :-
-    porcentajeDe(NroDeGeneracion, Porcentaje),
-    PotenciaFinal is PotenciaBase + PotenciaBase * Porcentaje.
+potencia(especial(Generacion, PotenciaBase), Potencia) :-
+    potenciaExtra(Generacion, Porcentaje),
+    Potencia is PotenciaBase * (1 + Porcentaje / 100).
 
-potenciaEnBaseTipoDeMov(tipoEncadenado(ListaDeValores), PotenciaFinal) :-
-    sum_list(ListaDeValores, Sumatoria),
-    length(ListaDeValores, CantidadDeValores),
-    PotenciaFinal is Sumatoria / CantidadDeValores.
+potencia(encadenado(Valores), Potencia) :-
+    sum_list(Valores, Suma),
+    length(Valores, Cantidad),
+    Potencia is Suma / Cantidad.
 
-potenciaEnBaseTipoDeMov(tipoFisico(PotenciaFinal), PotenciaFinal).
+potencia(fisico(Potencia), Potencia).
 
-porcentajeDe(NroDeGeneracion, Porcentaje) :-
-    multiplicadorPor(NroDeGeneracion, Porcentaje).
+potenciaExtra(Generacion, Porcentaje) :-     multiplicador(Generacion, Porcentaje).
+potenciaExtra(Generacion, 0         ) :- not(multiplicador(Generacion, _)).
 
-porcentaje(NroDeGeneracion, 0) :-
-    not(multiplicadorPor(NroDeGeneracion, _)).
-
-% Hechos: multiplicadorPor(Generacion, Portentaje).
-multiplicadorPor(1, 0.10).
-multiplicadorPor(2, -0.20).
-multiplicadorPor(3, 0.50).
+% Hechos: multiplicador(Generacion, Portentaje).
+multiplicador(1, 10).
+multiplicador(2,-20).
+multiplicador(3, 50).
 
 % Tercera Parte: Combates
 
@@ -152,33 +150,24 @@ esFuerte(agua, fuego).
 esFuerte(fuego, electrico).
 
 % Punto 1: 
-tieneChancesDeGanar(PokemonAtacante, PokemonDefensor) :-
-    noSonLibres(PokemonAtacante, PokemonDefensor),
-    pokemon(PokemonAtacante, TipoAtacante),
-    pokemon(PokemonDefensor, TipoDefensor),
-    tieneAlgunMovConPotenciaMayorA(PokemonAtacante, PokemonDefensor, PotenciaAtacante, PotenciaDefensor),
-    ventajaDeTipo(TipoAtacante, TipoDefensor, PotenciaAtacante, PotenciaDefensor).
-
-noSonLibres(PokemonAtacante, PokemonDefensor) :-
-    tieneA(_, PokemonAtacante),
-    tieneA(_,  PokemonDefensor).
-
-tieneAlgunMovConPotenciaMayorA(PokemonAtacante, PokemonDefensor, PotenciaAtacante, PotenciaDefensor) :-
-    potenciaDeUnMov(PokemonAtacante, _, PotenciaAtacante),
-    potenciaDeUnMov(PokemonDefensor, _, PotenciaDefensor),
+tieneChancesDeGanar(Atacante, Defensor) :-
+    libre(Atacante),
+    libre(Defensor),
+    potenciaMovimientoContra(Atacante, PotenciaAtacante, Defensor),
+    potenciaMovimientoContra(Defensor, PotenciaDefensor, Atacante),
     PotenciaAtacante > PotenciaDefensor.
 
-ventajaDeTipo(TipoAtacante, TipoDefensor, PotenciaAtacante, PotenciaDefensor) :-
-    ventajaDeTipoParaAtacante(TipoAtacante, TipoDefensor, PotenciaAtacante, PotenciaDefensor).
+potenciaMovimientoContra(Pokemon, PotenciaFinal, Adversario):-
+    ventajaDeTipo(Pokemon, Adversario),
+    potenciaMovimiento(Pokemon,Potencia),
+    PotenciaFinal is Potencia * 2.
 
-ventajaDeTipo(TipoAtacante, TipoDefensor, PotenciaAtacante, PotenciaDefensor) :-
-    ventajaDeTipoParaAtacante(TipoDefensor, TipoAtacante, PotenciaDefensor, PotenciaAtacante).
+potenciaMovimientoContra(Pokemon, Potencia, Adversario):-
+    not(ventajaDeTipo(Pokemon, Adversario)),
+    potenciaMovimiento(Pokemon,Potencia).
 
-ventajaDeTipoParaAtacante(TipoAtacante, TipoDefensor, PotenciaAtacante, PotenciaDefensor) :-
-    esFuerte(TipoAtacante, TipoDefensor),
-    PotenciaAtacante * 2 > PotenciaDefensor.
+ventajaDeTipo(Atacante, Defensor):-
+    pokemon(Atacante,TipoAtacante),
+    pokemon(Defensor,TipoDefensor),
+    esFuerte(TipoAtacante, TipoDefensor).
 
-ventajaDeTipoParaAtacante(TipoAtacante, TipoDefensor, PotenciaAtacante, PotenciaDefensor) :-
-    not(esFuerte(TipoAtacante, TipoDefensor)),
-    not(esFuerte(TipoDefensor,TipoAtacante)), 
-    PotenciaAtacante > PotenciaDefensor.
